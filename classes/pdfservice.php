@@ -1,0 +1,1228 @@
+<?
+
+class PDFService {
+    function __construct() {
+        require_once('libs/tfpdf/tfpdf.php');
+        $this->pdf = new tFPDF();
+        $this->pdf->AddFont('Calibri','','calibri.ttf',true);
+        $this->pdf->AddFont('Calibrib','b','calibrib.ttf',true);
+        $this->pdf->AddPage();
+    }
+
+    function saveFile($params) {
+        $params->fileContents = $this->pdf->Output('S');
+        $params->originalFileName = $params->originalFileName ? $params->originalFileName : 'JoOS_PDF_Export';
+        $params->originalMimeType = 'application/pdf';
+        return (new FileSystem())->saveFile($params);
+    }
+
+    function render() {
+        $this->pdf->Output();
+    }
+
+    function generateQuestionsAnswers($questions, $language) {
+        foreach($questions as $key => $question) {
+            $this->pdf->SetFont('Calibrib','b',14);
+                $this->pdf->MultiCell(190,8,($key+1).". ".$question->{'title_'.$language});
+            $this->pdf->SetFont('Calibri','',14);
+            if(isset($question->children)) {
+                $this->HR(true, 0);
+                $noChildren = count($question->children);
+                foreach($question->children as $i => $child) {
+                    if($i % 4 === 3) {
+                        $this->HR();
+                    }
+                    $this->VR(1);
+                    $this->pdf->Cell(5,10,isset($child->answer) ? "√" : "");
+                    $this->VR(1);
+                    if($i % 4 !== 3) {
+                        $this->pdf->Cell(42,10,$child->{'title_'.$language});
+                    } else {
+                        // The 4th one needs to be slightly wider (44 instead of 42)
+                        // It also needs a closing VR on the right side
+                        $this->pdf->Cell(44,10,$child->{'title_'.$language});
+                        $this->VR(1);
+                        $this->pdf->Ln(8);
+                    }
+                }
+            } else {
+                $this->pdf->MultiCell(190, 8, isset($question->answer) ? $question->answer : '');
+                $this->HR();
+            }
+            $this->pdf->Ln(8);
+        }
+    }
+
+    function HR($before = false, $noLinesOffset = 1){
+        $y = $this->pdf->GetY();
+        if($before){
+            $this->pdf->Line(10,$y - $noLinesOffset * 8 + 1,200,$y - $noLinesOffset * 8 + 1);
+        } else {
+            $this->pdf->Line(10,$y + $noLinesOffset * 8 + 1,200,$y + $noLinesOffset * 8 + 1);
+        }
+    }
+
+    function VR($noLinesHeight = 2){
+        $x = $this->pdf->GetX();
+        $y = $this->pdf->GetY();
+        $this->pdf->Line($x,$y + 1,$x,$y + $noLinesHeight * 8 + 1);
+    }
+
+    function Title($text){
+        $this->pdf->SetFont('Calibrib','b',20);
+            $this->pdf->Cell(0, 10, $text);
+            $this->HR();
+        $this->pdf->Ln(8);
+    }
+
+    function PrintReportStatus($reportStatus){
+        if($reportStatus === "0") {
+            $text = 'Δεν έχει υποβληθεί';
+            $this->pdf->SetTextColor(200, 0, 0);
+            $x = $this->pdf->GetX();
+            $this->pdf->SetFont('Calibrib', 'b', 10);
+                $this->pdf->Cell(0, 10, $text);
+                $this->pdf->Cell(0, 10, $text, 0, 0, 'R');
+            $this->pdf->SetX($x);
+            $this->pdf->SetTextColor(0, 0, 0);
+        }
+    }
+
+    function Head($text){
+        $this->pdf->SetFont('Calibrib','b',14);
+        $this->pdf->Cell(0, 10, $text, 0, 0,'C');
+        $this->pdf->Ln(10);
+    }
+
+    function AddPage() {
+        $this->pdf->AddPage();
+    }
+
+    function printApplicationStatus($applicationStatus) {
+        if($applicationStatus === "0") {
+            // TODO: SubHead() missing!
+            // $this->SubHead('Incomplete');
+        }
+    }
+
+    function printOnGreekPersonalTemplate($applicationData) {
+        $this->Head($applicationData->heading_gr);
+        $this->Title("Στοιχεία Ταυτότητας");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Ονοματεπώνυμο");
+            $this->VR(6);
+            $this->pdf->Cell(50,10,"Ημερομηνία Γέννησης");
+            $this->VR(6);
+            $this->pdf->Cell(0,10,"Τόπος Γέννησης");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->lastName) ? $applicationData->data->lastName : '').", ".(isset($applicationData->data->firstName) ? $applicationData->data->firstName : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->birthDate) ? $applicationData->data->birthDate : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->birthPlace) ? $applicationData->data->birthPlace : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Email");
+            $this->pdf->Cell(50,10,"Τηλέφωνο");
+            $this->pdf->Cell(0,10,"Επάγγελμα");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->email) ? $applicationData->data->email : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->phone) ? $applicationData->data->phone : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->occupation) ? $applicationData->data->occupation : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Α.Δ.Τ.");
+            $this->pdf->Cell(50,10,"Α.Φ.Μ.");
+            $this->pdf->Cell(0,10,"Δ.Ο.Υ.");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->greekIdNumber) ? $applicationData->data->greekIdNumber : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->greekSsn) ? $applicationData->data->greekSsn : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->irsOffice) ? $applicationData->data->irsOffice : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(55,10,"Υπηκοότητα");
+            $this->VR();
+            $this->pdf->Cell(50,10,"Ευρωπαίος Πολίτης");
+            $this->VR();
+            $this->pdf->Cell(45,10,"Αρ. Διαβατηρίου");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Άδεια Παραμονής");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(55,10,(isset($applicationData->data->citizenship) ? $applicationData->data->citizenship : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->euCitizen) ? $applicationData->data->euCitizen : ''));
+            $this->pdf->Cell(45,10,(isset($applicationData->data->passportNumber) ? $applicationData->data->passportNumber : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->residencePermit) ? $applicationData->data->residencePermit : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->Ln(8);
+        $this->Title("Στοιχεία Οικογένειας");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Οικογενειακή κατάσταση");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Ονοματεπώνυμο Συζύγου");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $familyStatus = null;
+            if(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familySingle"){
+                $familyStatus = "Άγαμος/η";
+            } elseif(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familyMarried"){
+                $familyStatus = "Έγγαμος/η";
+            } elseif(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familyDivorced"){
+                $familyStatus = "Διαζευγμένος/η";
+            } elseif(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familyWidow"){
+                $familyStatus = "Χήρος/α";
+            }
+            $this->pdf->Cell(80,10,$familyStatus);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->familySpouseLastName) ? $applicationData->data->familySpouseLastName : '').", ".(isset($applicationData->data->familySpouseFirstName) ? $applicationData->data->familySpouseFirstName : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Ονόματα και Ηλικίες Παιδιών");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->MultiCell(190,8,(isset($applicationData->data->familyKidsNamesAges) ? $applicationData->data->familyKidsNamesAges : ''));
+        $this->pdf->Ln(16);
+        $this->HR($this->pdf, true);
+        $this->Title("Διεύθυνση Κατοικίας");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"Οδός, αριθμός, Πόλη Τ.Κ., Χώρα");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->address) ? $applicationData->data->address : '').", ".(isset($applicationData->data->city) ? $applicationData->data->city : '')." ".(isset($applicationData->data->zipCode) ? $applicationData->data->zipCode : '').", ".(isset($applicationData->data->country) ? $applicationData->data->country : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->Ln(8);
+        $this->Title("Στοιχεία Ταυτότητας Κηδεμόνα");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Ονοματεπώνυμο Κηδεμόνα");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->guardianLastName) ? $applicationData->data->guardianLastName : '').", ".(isset($applicationData->data->guardianFirstName) ? $applicationData->data->guardianFirstName : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Email");
+            $this->VR();
+            $this->pdf->Cell(50,10,"Τηλέφωνο");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Επάγγελμα");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->guardianEmail) ? $applicationData->data->guardianEmail : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->guardianPhone) ? $applicationData->data->guardianPhone : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->guardianOccupation) ? $applicationData->data->guardianOccupation : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->MultiCell(190,8,"Περιγράψτε το πώς βλέπουν οι γονείς / κηδεμόνες σας την πρόθεσή σας να σπουδάσετε στο Ελληνικό Βιβλικό Κολέγιο");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->MultiCell(190,8,(isset($applicationData->data->guardianOpinion) ? $applicationData->data->guardianOpinion : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+    }
+
+    function printOnGreekEducationTemplate($applicationData) {
+        $this->Head($applicationData->heading_gr);
+        $this->Title("Πρωτοβάθμια & Δευτεροβάθμια Εκπαίδευση");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(160,10,"Δημοτικό Σχολείο");
+            $this->VR(6);
+            $this->pdf->Cell(0,10,"Αποφοίτηση");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(160,10,(isset($applicationData->data->elementaryName) ? $applicationData->data->elementaryName : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->elementaryGraduationYear) ? $applicationData->data->elementaryGraduationYear : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(160,10,"Γυμνάσιο");
+            $this->pdf->Cell(0,10,"Αποφοίτηση");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(160,10,(isset($applicationData->data->middleSchoolName) ? $applicationData->data->middleSchoolName : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->middleSchoolGraduationYear) ? $applicationData->data->middleSchoolGraduationYear : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Λύκειο / ΤΕΛ");
+            $this->VR();
+            $this->pdf->Cell(80,10,"Κατεύθυνση / Ειδίκευση");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Αποφοίτηση");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->secondarySchoolName) ? $applicationData->data->secondarySchoolName : ''));
+            $this->pdf->Cell(80,10,(isset($applicationData->data->secondarySchoolDiscipline) ? $applicationData->data->secondarySchoolDiscipline : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->secondarySchoolGraduationYear) ? $applicationData->data->secondarySchoolGraduationYear : ''));
+            $this->HR();
+        $this->pdf->Ln(16);
+        $this->Title("Τριτοβάθμια Εκπαίδευση");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Μεταλυκειακές Σπουδές (ΙΕΚ κλπ.)");
+            $this->VR(4);
+            $this->pdf->Cell(80,10,"Κατεύθυνση / Ειδίκευση");
+            $this->VR(4);
+            $this->pdf->Cell(0,10,"Αποφοίτηση");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->communityCollegeName) ? $applicationData->data->communityCollegeName : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->communityCollegeDiscipline) ? $applicationData->data->communityCollegeDiscipline : ''));
+            $y2a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(170);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->communityCollegeGraduationYear) ? $applicationData->data->communityCollegeGraduationYear : ''));
+            $this->pdf->SetY($y1a > $y2a ? $y1a : $y2a);
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"ΑΕΙ, ΑΤΕΙ κλπ.");
+            $this->VR(4);
+            $this->pdf->Cell(80,10,"Κατεύθυνση / Ειδίκευση");
+            $this->VR(4);
+            $this->pdf->Cell(0,10,"Αποφοίτηση");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->collegeName) ? $applicationData->data->collegeName : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->collegeDiscipline) ? $applicationData->data->collegeDiscipline : ''));
+            $y2a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(170);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->collegeGraduationYear) ? $applicationData->data->collegeGraduationYear : ''));
+            $this->pdf->SetY($y1a > $y2a ? $y1a : $y2a);
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Μεταπτυχιακό");
+            $this->VR(4);
+            $this->pdf->Cell(80,10,"Κατεύθυνση / Ειδίκευση");
+            $this->VR(4);
+            $this->pdf->Cell(0,10,"Αποφοίτηση");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->graduateSchoolName) ? $applicationData->data->graduateSchoolName : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->graduateSchoolDiscipline) ? $applicationData->data->graduateSchoolDiscipline : ''));
+            $y2a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(170);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->graduateSchoolGraduationYear) ? $applicationData->data->graduateSchoolGraduationYear : ''));
+            $this->pdf->SetY($y1a > $y2a ? $y1a : $y2a);
+            $this->HR();
+        $this->pdf->Ln(16);
+        $this->Title("Γλώσσες");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Επίπεδο Γνώσης Ελληνικών");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Επίπεδο Γνώσης Αγγλικών");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $greekLevel = null;
+            if(isset($applicationData->data->greek) && $applicationData->data->greek === "1"){
+                $greekLevel = "Μέτριο (1/4)";
+            } elseif(isset($applicationData->data->greek) && $applicationData->data->greek === "2"){
+                $greekLevel = "Καλό (2/4)";
+            } elseif(isset($applicationData->data->greek) && $applicationData->data->greek === "3"){
+                $greekLevel = "Πολύ Καλό (3/4)";
+            } elseif(isset($applicationData->data->greek) && $applicationData->data->greek === "4"){
+                $greekLevel = "Άριστο (4/4)";
+            }
+            $this->pdf->Cell(80,10,$greekLevel);
+            $englishLevel = null;
+            if(isset($applicationData->data->english) && $applicationData->data->english === "1"){
+                $englishLevel = "Μέτριο (1/4)";
+            } elseif(isset($applicationData->data->english) && $applicationData->data->english === "2"){
+                $englishLevel = "Καλό (2/4)";
+            } elseif(isset($applicationData->data->english) && $applicationData->data->english === "3"){
+                $englishLevel = "Πολύ Καλό (3/4)";
+            } elseif(isset($applicationData->data->english) && $applicationData->data->english === "4"){
+                $englishLevel = "Άριστο (4/4)";
+            }
+            $this->pdf->Cell(0,10,$englishLevel);
+            $this->HR();
+        $this->pdf->Ln(8);
+    }
+
+    function printOnGreekHealthTemplate($applicationData) {
+        $this->Head($applicationData->heading_gr);
+        $this->Title("Ιατρικό Ιστορικό");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(80,10,"Επιλέξτε ποιες από τις παρακάτω ασθένειες έχετε περάσει");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->HR();
+			$this->VR(3);
+			$this->pdf->Cell(5,10,isset($applicationData->data->tonsillitis)?"√":"");
+			$this->VR(3);
+			$this->pdf->Cell(35,10,"Αμυγδαλίτιδα");
+			$this->VR(3);
+			$this->pdf->Cell(5,10,isset($applicationData->data->chickenPox)?"√":"");
+			$this->VR(3);
+			$this->pdf->Cell(35,10,"Ανεμοβλογιά");
+			$this->VR(3);
+			$this->pdf->Cell(5,10,isset($applicationData->data->bronchialAsthma)?"√":"");
+			$this->VR(3);
+			$this->pdf->Cell(35,10,"Βρογχικό άσθμα");
+			$this->VR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->diphtheria)?"√":"");
+			$this->VR();
+			$this->pdf->Cell(35,10,"Διφθερίτιδα");
+			$this->VR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->epilepsy)?"√":"");
+			$this->VR();
+			$this->pdf->Cell(0,10,"Επιληψία");
+			$this->VR(3);
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->rubella)?"√":"");
+			$this->pdf->Cell(35,10,"Ερυθρά");
+			$this->pdf->Cell(5,10,isset($applicationData->data->measles)?"√":"");
+			$this->pdf->Cell(35,10,"Ιλαρά");
+			$this->pdf->Cell(5,10,isset($applicationData->data->yellowFever)?"√":"");
+			$this->pdf->Cell(35,10,"Κίτρινο πυρετό");
+			$this->pdf->Cell(5,10,isset($applicationData->data->meningitis)?"√":"");
+			$this->pdf->Cell(35,10,"Μηνιγγίτιδα");
+			$this->pdf->Cell(5,10,isset($applicationData->data->mumps)?"√":"");
+			$this->pdf->Cell(35,10,"Παρωτίτιδα");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->polio)?"√":"");
+			$this->pdf->Cell(35,10,"Πολιομυελίτιδα");
+			$this->pdf->Cell(5,10,isset($applicationData->data->cholera)?"√":"");
+			$this->pdf->Cell(35,10,"Χολέρα");
+			$this->pdf->Cell(5,10,isset($applicationData->data->heartAbnormality)?"√":"");
+			$this->pdf->Cell(35,10,"Καρδιακή ανωμαλία");
+			$this->HR(false, 2);
+		$this->pdf->Ln(8);
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Άλλες ασθένειες");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->otherDiseasesDetails) ? $applicationData->data->otherDiseasesDetails : ''));
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->HR(true, 0);
+			$this->pdf->Cell(0,10,"Επιλέξτε ποια από τα παρακάτω εμβόλια έχετε κάνει");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->HR();
+			$this->VR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccinePertussis)?"√":"");
+			$this->VR();
+			$this->pdf->Cell(35,10,"Αντιδιφθεριτικό");
+			$this->VR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccineDiphtheria)?"√":"");
+			$this->VR();
+			$this->pdf->Cell(35,10,"Αντικοκκυτικό");
+			$this->VR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccineTetanus)?"√":"");
+			$this->VR();
+			$this->pdf->Cell(35,10,"Αντιτετανικό");
+			$this->VR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccineSmallpox)?"√":"");
+			$this->VR();
+			$this->pdf->Cell(35,10,"Δαμαλισμού");
+			$this->VR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccineRubella)?"√":"");
+			$this->VR();
+			$this->pdf->Cell(0,10,"Ερυθράς");
+			$this->VR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR();
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccineMeasles)?"√":"");
+			$this->pdf->Cell(35,10,"Ιλαράς");
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccineMumps)?"√":"");
+			$this->pdf->Cell(35,10,"Παρωτίτιδας");
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccinePolio)?"√":"");
+			$this->pdf->Cell(35,10,"Πολιομυελίτιδας");
+			$this->pdf->Cell(5,10,isset($applicationData->data->vaccineCholera)?"√":"");
+			$this->pdf->Cell(35,10,"Χολέρας");
+			$this->HR(false, 2);
+		$this->pdf->Ln(16);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Άλλα εμβόλια");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->otherVaccinesDetails) ? $applicationData->data->otherVaccinesDetails : ''));
+		$this->pdf->Ln(8);
+		$this->HR(true, 0);
+		$this->Title("Ναρκωτικές Ουσίες");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Έχετε κάνει χρήση ναρκωτικών ουσιών");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->drugsUseDetails) ? $applicationData->data->drugsUseDetails : ''));
+		$this->pdf->Ln(8);
+		$this->HR(true, 0);
+		$this->Title("Παρούσα κατάσταση υγείας");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Ασθένειες για τις οποίες το Κολέγιο θα πρέπει να γνωρίζει");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->currentDiseasesDetails) ? $applicationData->data->currentDiseasesDetails : ''));
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->HR(true, 0);
+			$this->pdf->Cell(0,10,"Συμπτώματα για τα οποία το Κολέγιο θα πρέπει να γνωρίζει");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->currentSymptomsDetails) ? $applicationData->data->currentSymptomsDetails : ''));
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->HR(true, 0);
+			$this->pdf->Cell(0,10,"Φάρμακα για τα οποία το Κολέγιο θα πρέπει να γνωρίζει");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->currentMedicinesDetails) ? $applicationData->data->currentMedicinesDetails : ''));
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->HR(true, 0);
+			$this->pdf->Cell(0,10,"Τροφικές αλλεργίες για τις οποίες το Κολέγιο θα πρέπει να γνωρίζει");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->foodAllergyDetails) ? $applicationData->data->foodAllergyDetails : ''));
+		$this->pdf->Ln(8);
+		$this->HR(true, 0);
+		// $this->Title("Επαφές για περίπτωση έκτακτης ανάγκης");
+		// $this->pdf->SetFont('Calibrib','b',14);
+		//     $this->pdf->Cell(130,10,"Ονοματεπώνυμο πρώτου προσώπου");
+		//     $this->VR(6);
+		//     $this->pdf->Cell(0,10,"Τηλέφωνο");
+		// $this->pdf->Ln(8);
+		// $this->pdf->SetFont('Calibri','',14);
+		//     $this->pdf->Cell(130,10,(isset($applicationData->data->firstEmergencyContactLastName) ? $applicationData->data->firstEmergencyContactLastName : '').", ".(isset($applicationData->data->firstEmergencyContactFirstName) ? $applicationData->data->firstEmergencyContactFirstName : ''));
+		//     $this->pdf->Cell(0,10,(isset($applicationData->data->firstEmergencyContactPhone) ? $applicationData->data->firstEmergencyContactPhone : ''));
+		//     $this->HR();
+		// $this->pdf->Ln(8);
+		// $this->pdf->SetFont('Calibrib','b',14);
+		//     $this->pdf->Cell(130,10,"Ονοματεπώνυμο δεύτερου προσώπου");
+		//     $this->pdf->Cell(0,10,"Τηλέφωνο");
+		// $this->pdf->Ln(8);
+		// $this->pdf->SetFont('Calibri','',14);
+		//     $this->pdf->Cell(130,10,(isset($applicationData->data->secondEmergencyContactLastName) ? $applicationData->data->secondEmergencyContactLastName : '').", ".(isset($applicationData->data->secondEmergencyContactFirstName) ? $applicationData->data->secondEmergencyContactFirstName : ''));
+		//     $this->pdf->Cell(0,10,(isset($applicationData->data->secondEmergencyContactPhone) ? $applicationData->data->secondEmergencyContactPhone : ''));
+		//     $this->HR();
+		// $this->pdf->Ln(8);
+		// $this->pdf->SetFont('Calibrib','b',14);
+		//     $this->pdf->Cell(130,10,"Ονοματεπώνυμο Οικογενειακού Ιατρού");
+		//     $this->pdf->Cell(0,10,"Τηλέφωνο");
+		// $this->pdf->Ln(8);
+		// $this->pdf->SetFont('Calibri','',14);
+		//     $this->pdf->Cell(130,10,(isset($applicationData->data->doctorLastName) ? $applicationData->data->doctorLastName : '').", ".(isset($applicationData->data->doctorFirstName) ? $applicationData->data->doctorFirstName : ''));
+		//     $this->pdf->Cell(0,10,(isset($applicationData->data->doctorPhone) ? $applicationData->data->doctorPhone : ''));
+		//     $this->HR();
+		// $this->pdf->Ln(8);
+		// $this->pdf->SetFont('Calibrib','b',14);
+		//     $this->pdf->Cell(130,10,"Οδός, αριθμός, Πόλη Τ.Κ., Χώρα Ιατρείου");
+		// $this->pdf->Ln(8);
+		// $this->pdf->SetFont('Calibri','',14);
+		//     $this->pdf->Cell(0,10,(isset($applicationData->data->doctorAddress) ? $applicationData->data->doctorAddress : '').", ".(isset($applicationData->data->doctorCity) ? $applicationData->data->doctorCity : '')." ".(isset($applicationData->data->doctorZipCode) ? $applicationData->data->doctorZipCode : '').", ".(isset($applicationData->data->doctorCountry) ? $applicationData->data->doctorCountry : ''));
+		//     $this->HR();
+		// $this->pdf->Ln(8);
+    }
+
+    function printOnGreekChristianLifeTemplate($applicationData) {
+        $this->Head($applicationData->heading_gr);
+        $this->Title("Εκκλησία & Διακονία");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Όνομα Εκκλησίας που εκκλησιάζεσαι");
+			$this->VR();
+			$this->pdf->Cell(0,10,"Πόσο καιρό είσαι μέλος");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(130,10,(isset($applicationData->data->churchName) ? $applicationData->data->churchName : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data->churchMemberHowLong) ? $applicationData->data->churchMemberHowLong : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Προς ποια Χριστιανική υπηρεσία πιστεύεις ότι έχεις κλίση");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(0,8,(isset($applicationData->data->ministryTalent) ? $applicationData->data->ministryTalent : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Σε ποιους τομείς του Χριστιανικού έργου έχεις εργαστεί");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(0,8,(isset($applicationData->data->ministryExperience) ? $applicationData->data->ministryExperience : ''));
+			$this->HR();
+		$this->pdf->Ln(16);
+		$this->Title("Ομολογία Πίστεως");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Περιγράψτε με απλά λόγια τη Χριστιανική σας πίστη");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(0,8,(isset($applicationData->data->testimony) ? $applicationData->data->testimony : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Έχετε διαβάσει και αποδέχεστε την Ομολογία Πίστης του Ελληνικού Βιβλικού Κολεγίου");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->statementOfFaithApproval) && $applicationData->data->statementOfFaithApproval === '1') ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(185,10,"Ναι");
+			$this->VR(1);
+			$this->HR(false);
+		$this->pdf->Ln(8);
+		$this->pdf->Ln(8);
+    }
+
+    function printOnGreekReferencesTemplate($applicationData) {
+        if (!is_array($applicationData->data)) {
+            $applicationData->data = [];
+        }
+        $this->Head($applicationData->heading_gr);
+        $this->Title("Συστατική Επιστολή (Ποιμένας ή Πρεσβύτερος)");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Ονοματεπώνυμο");
+			$this->VR(4);
+			$this->pdf->Cell(0,10,"Τηλέφωνο");
+		$this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(130,10,(isset($applicationData->data[0]->lastName) ? $applicationData->data[0]->lastName : '').", ".(isset($applicationData->data[0]->firstName) ? $applicationData->data[0]->firstName : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[0]->phone) ? $applicationData->data[0]->phone : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Οδός, αριθμός, Πόλη Τ.Κ., Χώρα");
+			$this->pdf->Cell(0,10,"Email");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(130,10,(isset($applicationData->data[0]->address) ? $applicationData->data[0]->address : '').", ".(isset($applicationData->data[0]->city) ? $applicationData->data[0]->city : '')." ".(isset($applicationData->data[0]->zipCode) ? $applicationData->data[0]->zipCode : '').", ".(isset($applicationData->data[0]->country) ? $applicationData->data[0]->country : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[0]->email) ? $applicationData->data[0]->email : ''));
+			$this->HR();
+		$this->pdf->Ln(16);
+		$this->Title("Συστατική Επιστολή (Δεύτερο Πρόσωπο)");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Ονοματεπώνυμο");
+			$this->VR(4);
+			$this->pdf->Cell(0,10,"Τηλέφωνο");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(130,10,(isset($applicationData->data[1]->lastName) ? $applicationData->data[1]->lastName : '').", ".(isset($applicationData->data[1]->firstName) ? $applicationData->data[1]->firstName : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[1]->phone) ? $applicationData->data[1]->phone : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Οδός, αριθμός, Πόλη Τ.Κ., Χώρα");
+			$this->pdf->Cell(0,10,"Email");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(130,10,(isset($applicationData->data[1]->address) ? $applicationData->data[1]->address : '').", ".(isset($applicationData->data[1]->city) ? $applicationData->data[1]->city : '')." ".(isset($applicationData->data[1]->zipCode) ? $applicationData->data[1]->zipCode : '').", ".(isset($applicationData->data[1]->country) ? $applicationData->data[1]->country : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[1]->email) ? $applicationData->data[1]->email : ''));
+			$this->HR();
+		$this->pdf->Ln(16);
+		$this->Title("Συστατική Επιστολή (Τρίτο Πρόσωπο)");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Ονοματεπώνυμο");
+			$this->VR(4);
+			$this->pdf->Cell(0,10,"Τηλέφωνο");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(130,10,(isset($applicationData->data[2]->lastName) ? $applicationData->data[2]->lastName : '').", ".(isset($applicationData->data[2]->firstName) ? $applicationData->data[2]->firstName : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[2]->phone) ? $applicationData->data[2]->phone : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Οδός, αριθμός, Πόλη Τ.Κ., Χώρα");
+			$this->pdf->Cell(0,10,"Email");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(130,10,(isset($applicationData->data[2]->address) ? $applicationData->data[2]->address : '').", ".(isset($applicationData->data[2]->city) ? $applicationData->data[2]->city : '')." ".(isset($applicationData->data[2]->zipCode) ? $applicationData->data[2]->zipCode : '').", ".(isset($applicationData->data[2]->country) ? $applicationData->data[2]->country : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[2]->email) ? $applicationData->data[2]->email : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+    }
+
+    function printOnGreekFinancialTemplate($applicationData) {
+        $this->Head($applicationData->heading_gr);
+		$this->Title("Ανάληψη Οικονομικής Ευθύνης");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Επιλέξτε τον τρόπο φοίτησης που σας ενδιαφέρει");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->studentPackage) && $applicationData->data->studentPackage === "1") ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(60,10,"Τακτικός, Οικότροφος");
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->studentPackage) && $applicationData->data->studentPackage === "2") ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(60,10,"Τακτικός, μη-Οικότροφος");
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->studentPackage) && $applicationData->data->studentPackage === "3") ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(55,10,"μη-Τακτικός");
+			$this->VR(1);
+			$this->HR(false, 2);
+		$this->pdf->Ln(8);
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->HR(4);
+			$this->pdf->MultiCell(0,8,"Ονοματεπώνυμα των προσώπων που αναλαμβάνουν την ευθύνη να συνεισφέρουν στην κάλυψη των εξόδων");
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(0,8,(isset($applicationData->data->sponsors) ? $applicationData->data->sponsors : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Συνολικό ποσό που θα καλυφθεί από τα παραπάνω πρόσωπα");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(0,10,(isset($applicationData->data->sponsorsTotal) ? $applicationData->data->sponsorsTotal : ''));
+		$this->pdf->Ln(8);
+    }
+
+    function printOnISPPersonalTemplate($applicationData) {
+        $this->Head($applicationData->heading_en);
+        $this->Title("Identity Information");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Full Name");
+            $this->VR(4);
+            $this->pdf->Cell(50,10,"Date of Birth");
+            $this->VR(4);
+            $this->pdf->Cell(0,10,"Place of Birth");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->lastName) ? $applicationData->data->lastName : '').", ".(isset($applicationData->data->firstName) ? $applicationData->data->firstName : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->birthDate) ? $applicationData->data->birthDate : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->birthPlace) ? $applicationData->data->birthPlace : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Email");
+            $this->pdf->Cell(50,10,"Phone");
+            $this->pdf->Cell(0,10,"Occupation");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->email) ? $applicationData->data->email : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->phone) ? $applicationData->data->phone : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->occupation) ? $applicationData->data->occupation : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(65,10,"Citizenship");
+            $this->VR();
+            $this->pdf->Cell(40,10,"SSN / National ID");
+            $this->VR();
+            $this->pdf->Cell(40,10,"Passport Number");
+            $this->VR();
+            $this->pdf->Cell(40,10,"Valid EU residence");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(65,10,(isset($applicationData->data->citizenship) ? $applicationData->data->citizenship : ''));
+            $this->pdf->Cell(40,10,(isset($applicationData->data->ssn) ? $applicationData->data->ssn : ''));
+            $this->pdf->Cell(40,10,(isset($applicationData->data->passportNumber) ? $applicationData->data->passportNumber : ''));
+            $this->pdf->Cell(40,10,(isset($applicationData->data->residencePermit) ? $applicationData->data->residencePermit : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->Ln(8);
+        $this->Title("Family Information");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Family Status");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Spouse Full Name");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $familyStatus = null;
+            if(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familySingle"){
+                $familyStatus = "Single";
+            } elseif(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familyMarried"){
+                $familyStatus = "Married";
+            } elseif(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familyDivorced"){
+                $familyStatus = "Divorced";
+            } elseif(isset($applicationData->data->familyStatus) && $applicationData->data->familyStatus === "familyWidow"){
+                $familyStatus = "Widow";
+            }
+            $this->pdf->Cell(80,10,$familyStatus);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->familySpouseLastName) ? $applicationData->data->familySpouseLastName : '').", ".(isset($applicationData->data->familySpouseFirstName) ? $applicationData->data->familySpouseFirstName : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Names and ages of your children");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->MultiCell(190,8,(isset($applicationData->data->familyKidsNamesAges) ? $applicationData->data->familyKidsNamesAges : ''));
+            $this->HR();
+        $this->pdf->Ln(16);
+        $this->HR($this->pdf, true);
+        $this->Title("Address Information");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"Address, City, State / Province, ZIP / Postcode, Country");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->address) ? $applicationData->data->address : '').", ".(isset($applicationData->data->city) ? $applicationData->data->city : '')." ".(isset($applicationData->data->zipCode) ? $applicationData->data->zipCode : '').", ".(isset($applicationData->data->country) ? $applicationData->data->country : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"Permanent Address, City, State / Province, ZIP / Postcode, Country");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->permanentAddress) ? $applicationData->data->permanentAddress : '').", ".(isset($applicationData->data->permanentCity) ? $applicationData->data->permanentCity : '')." ".(isset($applicationData->data->permanentZipCode) ? $applicationData->data->permanentZipCode : '').", ".(isset($applicationData->data->permanentCountry) ? $applicationData->data->permanentCountry : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->Ln(8);
+        $this->Title("Guardian Information");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Guardian Full Name");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->guardianLastName) ? $applicationData->data->guardianLastName : '').", ".(isset($applicationData->data->guardianFirstName) ? $applicationData->data->guardianFirstName : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Email");
+            $this->VR();
+            $this->pdf->Cell(50,10,"Phone");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Occupation");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->guardianEmail) ? $applicationData->data->guardianEmail : ''));
+            $this->pdf->Cell(50,10,(isset($applicationData->data->guardianPhone) ? $applicationData->data->guardianPhone : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->guardianOccupation) ? $applicationData->data->guardianOccupation : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"Guardian Address, City, State / Province, ZIP / Postcode, Country");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->guardianAddress) ? $applicationData->data->guardianAddress : '').", ".(isset($applicationData->data->guardianCity) ? $applicationData->data->guardianCity : '')." ".(isset($applicationData->data->guardianZipCode) ? $applicationData->data->guardianZipCode : '').", ".(isset($applicationData->data->guardianCountry) ? $applicationData->data->guardianCountry : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->MultiCell(190,8,"Please describe how your parents / guardians view your desire to study at the Greek Bible College");
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->MultiCell(190,8,(isset($applicationData->data->guardianOpinion) ? $applicationData->data->guardianOpinion : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+    }
+
+    function printOnISPEducationTemplate($applicationData) {
+        $this->Head($applicationData->heading_en);
+        $this->Title("Secondary Education");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(160,10,"High School Name");
+            $this->VR();
+            $this->pdf->Cell(0,10,"Graduation");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(160,10,(isset($applicationData->data->secondarySchoolName) ? $applicationData->data->secondarySchoolName : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->secondarySchoolGraduationYear) ? $applicationData->data->secondarySchoolGraduationYear : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"High School Address, City, State / Province, ZIP / Postcode, Country");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->secondarySchoolAddress) ? $applicationData->data->secondarySchoolAddress : '').", ".(isset($applicationData->data->secondarySchoolCity) ? $applicationData->data->secondarySchoolCity : '')." ".(isset($applicationData->data->secondarySchoolZipCode) ? $applicationData->data->secondarySchoolZipCode : '').", ".(isset($applicationData->data->secondarySchoolCountry) ? $applicationData->data->secondarySchoolCountry : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"High School education in English");
+            $this->VR();
+            $this->pdf->Cell(0,10,"English Language Certificate (TOEFL / IELTS)");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(80,10,(isset($applicationData->data->englishHighSchool) ? $applicationData->data->englishHighSchool : ''));
+            $this->pdf->Cell(0,10,(isset($applicationData->data->englishCertificate) ? $applicationData->data->englishCertificate : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->Ln(8);
+        $this->Title("Higher Education");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Junior / Community College Name");
+            $this->VR(3);
+            $this->pdf->Cell(45,10,"Dates Attended");
+            $this->VR(3);
+            $this->pdf->Cell(0,10,"Discipline");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->communityCollegeName) ? $applicationData->data->communityCollegeName : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(45,8,(isset($applicationData->data->communityCollegeDatesAttended) ? $applicationData->data->communityCollegeDatesAttended : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $y2a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(135);
+            $this->pdf->MultiCell(0,8,(isset($applicationData->data->communityCollegeDiscipline) ? $applicationData->data->communityCollegeDiscipline : ''));
+            $this->pdf->SetY($y1a > $y2a ? $y1a : $y2a);
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"Junior / Community College Address, City, State / Province, ZIP / Postcode, Country");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->communityCollegeAddress) ? $applicationData->data->communityCollegeAddress : '').", ".(isset($applicationData->data->communityCollegeCity) ? $applicationData->data->communityCollegeCity : '')." ".(isset($applicationData->data->communityCollegeZipCode) ? $applicationData->data->communityCollegeZipCode : '').", ".(isset($applicationData->data->communityCollegeCountry) ? $applicationData->data->communityCollegeCountry : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"College / University Name");
+            $this->VR(3);
+            $this->pdf->Cell(45,10,"Dates Attended");
+            $this->VR(3);
+            $this->pdf->Cell(0,10,"Discipline");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->collegeName) ? $applicationData->data->collegeName : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(45,8,(isset($applicationData->data->collegeDatesAttended) ? $applicationData->data->collegeDatesAttended : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $y2a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(135);
+            $this->pdf->MultiCell(0,8,(isset($applicationData->data->collegeDiscipline) ? $applicationData->data->collegeDiscipline : ''));
+            $this->pdf->SetY($y1a > $y2a ? $y1a : $y2a);
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"College / University Address, City, State / Province, ZIP / Postcode, Country");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->collegeAddress) ? $applicationData->data->collegeAddress : '').", ".(isset($applicationData->data->collegeCity) ? $applicationData->data->collegeCity : '')." ".(isset($applicationData->data->collegeZipCode) ? $applicationData->data->collegeZipCode : '').", ".(isset($applicationData->data->collegeCountry) ? $applicationData->data->collegeCountry : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(80,10,"Graduate School Name");
+            $this->VR(3);
+            $this->pdf->Cell(45,10,"Dates Attended");
+            $this->VR(3);
+            $this->pdf->Cell(0,10,"Discipline");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(80,8,(isset($applicationData->data->graduateSchoolName) ? $applicationData->data->graduateSchoolName : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $y1b = $this->pdf->GetY();
+            $this->pdf->MultiCell(45,8,(isset($applicationData->data->graduateSchoolDatesAttended) ? $applicationData->data->graduateSchoolDatesAttended : ''));
+            $y1a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(90);
+            $y2b = $this->pdf->GetY();
+            $y2a = $this->pdf->GetY();
+            $this->pdf->SetY($y1b);
+            $this->pdf->SetX(135);
+            $this->pdf->MultiCell(0,8,(isset($applicationData->data->graduateSchoolDiscipline) ? $applicationData->data->graduateSchoolDiscipline : ''));
+            $this->pdf->SetY($y1a > $y2a ? $y1a : $y2a);
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->Cell(0,10,"Graduate School Address, City, State / Province, ZIP / Postcode, Country");
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->Cell(0,10,(isset($applicationData->data->graduateSchoolAddress) ? $applicationData->data->graduateSchoolAddress : '').", ".(isset($applicationData->data->graduateSchoolCity) ? $applicationData->data->graduateSchoolCity : '')." ".(isset($applicationData->data->graduateSchoolZipCode) ? $applicationData->data->graduateSchoolZipCode : '').", ".(isset($applicationData->data->graduateSchoolCountry) ? $applicationData->data->graduateSchoolCountry : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->Ln(8);
+        $this->Title("Additional Information");
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->MultiCell(190,8,"Please give more information regarding the reasons you were dismissed");
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->MultiCell(190,8,(isset($applicationData->data->dismissedDetails) ? $applicationData->data->dismissedDetails : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibrib','b',14);
+            $this->pdf->MultiCell(190,8,"Please list the academic honors or rewards that you have received");
+        $this->pdf->SetFont('Calibri','',14);
+            $this->pdf->MultiCell(190,8,(isset($applicationData->data->honorsDetails) ? $applicationData->data->honorsDetails : ''));
+            $this->HR();
+        $this->pdf->Ln(8);
+    }
+
+    function printOnISPHealthTemplate($applicationData) {
+        $this->Head($applicationData->heading_en);
+        $this->Title("Drugs use");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(80,10,"Information regarding drug use");
+            $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->drugsUseDetails) ? $applicationData->data->drugsUseDetails : ''));
+            $this->HR();
+		$this->pdf->Ln(16);
+        $this->Title("Current health status");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(80,10,"Information regarding current diseases");
+            $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->currentDiseasesDetails) ? $applicationData->data->currentDiseasesDetails : ''));
+            $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(80,10,"Information regarding current symptoms");
+            $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->currentSymptomsDetails) ? $applicationData->data->currentSymptomsDetails : ''));
+            $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(80,10,"Information regarding current medicines");
+            $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->currentMedicinesDetails) ? $applicationData->data->currentMedicinesDetails : ''));
+            $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(80,10,"Information regarding food allergies");
+            $this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(190,8,(isset($applicationData->data->foodAllergyDetails) ? $applicationData->data->foodAllergyDetails : ''));
+            $this->HR();
+		$this->pdf->Ln(16);
+        $this->Title("Emergency contacts");
+		$this->pdf->SetFont('Calibrib','b',14);
+		    $this->pdf->Cell(130,10,"First Contact's Full Name");
+		    $this->VR(4);
+		    $this->pdf->Cell(0,10,"Phone");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+		    $this->pdf->Cell(130,10,(isset($applicationData->data->firstEmergencyContactLastName) ? $applicationData->data->firstEmergencyContactLastName : '').", ".(isset($applicationData->data->firstEmergencyContactFirstName) ? $applicationData->data->firstEmergencyContactFirstName : ''));
+		    $this->pdf->Cell(0,10,(isset($applicationData->data->firstEmergencyContactPhone) ? $applicationData->data->firstEmergencyContactPhone : ''));
+		    $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+		    $this->pdf->Cell(130,10,"Second Contact's Full Name");
+		    $this->pdf->Cell(0,10,"Phone");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+		    $this->pdf->Cell(130,10,(isset($applicationData->data->secondEmergencyContactLastName) ? $applicationData->data->secondEmergencyContactLastName : '').", ".(isset($applicationData->data->secondEmergencyContactFirstName) ? $applicationData->data->secondEmergencyContactFirstName : ''));
+		    $this->pdf->Cell(0,10,(isset($applicationData->data->secondEmergencyContactPhone) ? $applicationData->data->secondEmergencyContactPhone : ''));
+		    $this->HR();
+		$this->pdf->Ln(8);
+    }
+
+    function printOnISPChristianLifeTemplate($applicationData) {
+        $this->Head($applicationData->heading_en);
+        $this->Title("Statement of Faith");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Family background, general tone of childhood household, and religious influences");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->familyBackground) ? $applicationData->data->familyBackground : ''));
+        $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"When and how you came to know Jesus Christ as your Lord and Savior");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->testimony) ? $applicationData->data->testimony : ''));
+        $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Current cultivation of spiritual life, personal disciplines, fellowship and activities");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->spiritualGrowth) ? $applicationData->data->spiritualGrowth : ''));
+        $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"I have read and accept the Statement of Faith of the Greek Bible College");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->statementOfFaithApproval) && $applicationData->data->statementOfFaithApproval === '1') ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(185,10,"Yes");
+			$this->VR(1);
+			$this->HR(false);
+		$this->pdf->Ln(16);
+        $this->Title("Ministry Information");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Do you have a particular type of ministry to which you feel called?");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->ministryTalent) ? $applicationData->data->ministryTalent : ''));
+        $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->MultiCell(0,8,"Please list any Church ministries you have been apart of, the years involved and whether or not you were in a leadership position");
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->ministryExperience) ? $applicationData->data->ministryExperience : ''));
+        $this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->MultiCell(0,8,"Give your reason(s) for desiring to enroll at the Greek Bible College - International Student Program. Please include your goals (minimum 50 words)");
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->reasonsToEnroll) ? $applicationData->data->reasonsToEnroll : ''));
+        $this->HR();
+		$this->pdf->Ln(16);
+        $this->Title("Additional Information");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(130,10,"Information regarding crime related convictions");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->convictionDetails) ? $applicationData->data->convictionDetails : ''));
+        $this->HR();
+		$this->pdf->Ln(8);
+    }
+
+    function printOnISPReferencesTemplate($applicationData) {
+        if (!is_array($applicationData->data)) {
+            $applicationData->data = [$applicationData->data];
+        }
+        $this->Head($applicationData->heading_en);
+        $this->Title("Pastor's Contact Information");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(50,10,"Full Name");
+			$this->VR();
+			$this->pdf->Cell(90,10,"Email");
+			$this->VR();
+			$this->pdf->Cell(0,10,"Phone");
+		$this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(50,10,(isset($applicationData->data[0]->pastoralReferenceLastName) ? $applicationData->data[0]->pastoralReferenceLastName : '').", ".(isset($applicationData->data[0]->pastoralReferenceFirstName) ? $applicationData->data[0]->pastoralReferenceFirstName : ''));
+			$this->pdf->Cell(90,10,(isset($applicationData->data[0]->pastoralReferenceEmail) ? $applicationData->data[0]->pastoralReferenceEmail : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[0]->pastoralReferencePhone) ? $applicationData->data[0]->pastoralReferencePhone : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Address, City, State / Province, ZIP / Postcode, Country");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(0,10,(isset($applicationData->data[0]->pastoralReferenceAddress) ? $applicationData->data[0]->pastoralReferenceAddress : '').", ".(isset($applicationData->data[0]->pastoralReferenceCity) ? $applicationData->data[0]->pastoralReferenceCity : '')." ".(isset($applicationData->data[0]->pastoralReferenceZipCode) ? $applicationData->data[0]->pastoralReferenceZipCode : '').", ".(isset($applicationData->data[0]->pastoralReferenceCountry) ? $applicationData->data[0]->pastoralReferenceCountry : ''));
+			$this->HR();
+		$this->pdf->Ln(16);
+		$this->Title("Teacher or Professor's Contact Information");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(50,10,"Full Name");
+			$this->VR();
+			$this->pdf->Cell(90,10,"Email");
+			$this->VR();
+			$this->pdf->Cell(0,10,"Phone");
+		$this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(50,10,(isset($applicationData->data[0]->academicReferenceLastName) ? $applicationData->data[0]->academicReferenceLastName : '').", ".(isset($applicationData->data[0]->academicReferenceFirstName) ? $applicationData->data[0]->academicReferenceFirstName : ''));
+			$this->pdf->Cell(90,10,(isset($applicationData->data[0]->academicReferenceEmail) ? $applicationData->data[0]->academicReferenceEmail : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data[0]->academicReferencePhone) ? $applicationData->data[0]->academicReferencePhone : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Address, City, State / Province, ZIP / Postcode, Country");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(0,10,(isset($applicationData->data[0]->academicReferenceAddress) ? $applicationData->data[0]->academicReferenceAddress : '').", ".(isset($applicationData->data[0]->academicReferenceCity) ? $applicationData->data[0]->academicReferenceCity : '')." ".(isset($applicationData->data[0]->academicReferenceZipCode) ? $applicationData->data[0]->academicReferenceZipCode : '').", ".(isset($applicationData->data[0]->academicReferenceCountry) ? $applicationData->data[0]->academicReferenceCountry : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+    }
+
+    function printOnISPFinancialTemplate($applicationData) {
+        $this->Head($applicationData->heading_en);
+		$this->Title("Financial Liability");
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(90,10,"Total cost for tuition");
+			$this->VR();
+			$this->pdf->Cell(0,10,"Total cost for room and board");
+		$this->pdf->Ln(8);
+        $this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(90,10,(isset($applicationData->data->tuition) ? $applicationData->data->tuition : ''));
+			$this->pdf->Cell(0,10,(isset($applicationData->data->roomBoard) ? $applicationData->data->roomBoard : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Payment schedule");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+        $this->pdf->MultiCell(0,8,(isset($applicationData->data->paymentSchedule) ? $applicationData->data->paymentSchedule : ''));
+        $this->HR();
+		$this->pdf->Ln(16);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->MultiCell(0,8,"I hereby declare that I have been informed of the estimated total cost of attendance, and I commit to pay it off according to the payment schedule");
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->financialApproval) && $applicationData->data->financialApproval === '1') ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(185,10,"Yes");
+			$this->VR(1);
+			$this->HR(false);
+        $this->HR();
+		$this->pdf->Ln(16);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,8,"The full amount will be paid by me");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->selfPaid) && $applicationData->data->selfPaid === '1') ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(185,10,"Yes");
+			$this->VR(1);
+			$this->HR(false);
+		$this->pdf->Ln(16);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->HR(4);
+			$this->pdf->MultiCell(0,8,"Please list the names of the individuals or organizations who will contribute to your payments");
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->MultiCell(0,8,(isset($applicationData->data->sponsors) ? $applicationData->data->sponsors : ''));
+			$this->HR();
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->Cell(0,10,"Please enter the total amount that will be covered by them");
+		$this->pdf->Ln(8);
+		$this->pdf->SetFont('Calibri','',14);
+			$this->pdf->Cell(0,10,(isset($applicationData->data->sponsorsTotal) ? $applicationData->data->sponsorsTotal : ''));
+		$this->pdf->Ln(16);
+		$this->pdf->SetFont('Calibrib','b',14);
+			$this->pdf->MultiCell(0,8,"I hereby declare that I commit to pay off any remaining balances even if my sponsors do not pay on my behalf");
+		$this->pdf->SetFont('Calibri','',14);
+			$this->HR(true, 0);
+			$this->VR(1);
+			$this->pdf->Cell(5,10,(isset($applicationData->data->debtApproval) && $applicationData->data->debtApproval === '1') ? "√" : "");
+			$this->VR(1);
+			$this->pdf->Cell(185,10,"Yes");
+			$this->VR(1);
+			$this->HR(false);
+		$this->pdf->Ln(16);
+    }
+
+    function printOnDocumentsTemplate($applicationData) {
+    }
+}

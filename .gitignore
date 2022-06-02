@@ -1,0 +1,40 @@
+# See http://help.github.com/ignore-files/ for more about ignoring files.
+
+/files
+
+# dependencies
+/libs
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Versioning Files
+.hash
+
+watermark.psd
+backup.cmd
+upload
+upload-to-silas
+pull.cmd
+push.cmd
+publish.cmd
+sync
+sync.cmd
+run.cmd
+
+settings.php
