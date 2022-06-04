@@ -2,8 +2,8 @@
 
 /files
 
-# dependencies
-/libs
+# Libraries
+libs/tfpdf
 
 # IDEs and editors
 /.idea
