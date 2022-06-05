@@ -12,7 +12,11 @@ $session;
 register_shutdown_function('shutdownFunction');
 
 // Load Settings
-include 'settings.php';
+if(file_exists('settings.php')){
+    require_once('settings.php');
+} else {
+    include 'settings.example.php';
+}
 
 // Load Handler
 include_once 'handler.php';
