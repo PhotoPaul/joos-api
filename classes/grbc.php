@@ -11,12 +11,7 @@ class GrBC {
     }
 
     function downloadDBTables($params) {
-        global $prod;
-        if($prod) {
-            $binPath = 'mysqldump';
-        } else {
-            $binPath = '"C:\Program Files (x86)\EasyPHP-DevServer-14.1VC11\binaries\mysql\bin\mysqldump.exe"';
-        }
+        $binPath = 'mysqldump';
 
         global $dbSettings;
         $mysqldumpArgs = ' --user='.$dbSettings->username;
@@ -27,7 +22,7 @@ class GrBC {
             $mysqldumpArgs.= ' '.implode(' ', $params->tableNames);
         }
         $dump = shell_exec($binPath.$mysqldumpArgs);
-        header('Content-disposition: attachment;filename="grbcgr.sql"');
+        header('Content-disposition: attachment;filename="'.date('Ymd').'_'.$dbSettings->db.(isset($params->tableNames[0]) ? '.'.$params->tableNames[0] : '').'.sql"');
         header('Content-type: application/octet-stream');
         dbg($dump);
     }
