@@ -201,12 +201,12 @@ class Transcript {
             $pdf->SetFont('Cardob','',14);
             if($language === 'english' || $language === 'englishECTS'){
                 HeaderLine($pdf, "SOCIETY OF BIBLICAL STUDIES", 14, 7);
-                HeaderLine($pdf, "Accredited by the ECTA, a member of ICETE", 11, 5);
+                HeaderLine($pdf, "Accredited by the ECTΕ, a member of ICETE", 11, 5);
                 HeaderLine($pdf, "Chr. Adamopoulou 8, Pikermi – Attiki 19009 (+30 210 603-8946)", 11, 10);
                 HeaderLine($pdf, "Official Transcript", 12, 15);
             } elseif($language === 'greek'){
                 HeaderLine($pdf, "ΕΤΑΙΡΕΙΑ ΒΙΒΛΙΚΩΝ ΣΠΟΥΔΩΝ", 14, 7);
-                HeaderLine($pdf, "Αναγνωρισμένη από την ECTA, μέλος του ICETE", 11, 5);
+                HeaderLine($pdf, "Αναγνωρισμένη από το ECTΕ, μέλος του ICETE", 11, 5);
                 HeaderLine($pdf, "Χρ. Αδαμοπούλου 8, Πικέρμι – Αττικής Τ.Κ. 19009 (+30 210 6038 946)", 11, 10);
                 HeaderLine($pdf, "Αναλυτική Βαθμολογία", 12, 15);
             }
@@ -373,7 +373,7 @@ class Transcript {
 
             $pdf->Ln(10);
             $pdf->SetFont('Cardo', '', 10);
-            $pdf->MultiCell(0, 4, "This transcript was released by the Registrar’s office of the Greek Bible College in a sealed envelope.\n\rIt is certified only if received unopened with the school seal on the lip of the envelope.\n\r\n\rThe Greek Bible College is accredited by the European Evangelical Accrediting Association, a member of the International Council for Evangelical Theological Education", 0);
+            $pdf->MultiCell(0, 4, "This transcript was released by the Registrar’s office of the Greek Bible College in a sealed envelope.\n\rIt is certified only if received unopened with the school seal on the lip of the envelope.\n\r\n\rThe Greek Bible College is accredited by the European Council for Theological Education (ECTE), a member of the International Council for Evangelical Theological Education (ICETE)", 0);
 
             $pdf->Ln(15);
             $pdf->SetFont('Cardob', '', 10);
