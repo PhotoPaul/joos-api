@@ -229,10 +229,12 @@ class EmailNotification {
     }
 
     function send() {
-        $this->mailer->gmail(
-            $this->email,
-            $this->subject,
-            $this->message
-        );
+        if (MAIL_SERVER_USERNAME !== '***MAIL_SERVER_USERNAME***') {
+            $this->mailer->gmail(
+                $this->email,
+                $this->subject,
+                $this->message
+            );
+        }
     }
 }
