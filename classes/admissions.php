@@ -80,7 +80,7 @@ class Admissions {
             }
             foreach ($roles as $roleHaystack) {
                 if (
-                    $roleHaystack->roleId === $roleNeedle->roleId &&
+                    $roleHaystack->roleId == $roleNeedle->roleId &&
                     (
                         (isset($roleHaystack->forProgramId) && isset($roleNeedle->forProgramId)) ?
                         $roleHaystack->forProgramId === $roleNeedle->forProgramId :
@@ -96,7 +96,7 @@ class Admissions {
         $urlGenerator = new UrlGenerator();
         foreach ($results as $key => $applicant) {
             $applicant->pdfUrl = $urlGenerator->getURL("getAdmissionsCompleteApplicationPDF", ["id" => $applicant->id]);
-            if (isset($params->id) && $applicant->id === $params->id) {
+            if (isset($params->id) && $applicant->id == $params->id) {
                 continue;
             } elseif (getRoleRecordIfExists($applicant->roles, ["roleId" => '5'])) {
                 // If filterHiddenOnly is true then only keep Applicants who:
