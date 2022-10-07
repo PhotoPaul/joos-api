@@ -3,11 +3,13 @@
 class Moodle {
 	function __construct() {
         ini_set('default_socket_timeout', 900);
-        $this->username = MODDLE_USERNAME;
-        $this->password = MODDLE_PASSWORD;
-        $this->service = MODDLE_SERVICE;
-        $this->token = MODDLE_TOKEN;
-        $this->url = MODDLE_URL;
+        if (MODDLE_TOKEN !== '***MODDLE_TOKEN***') {
+            $this->username = MODDLE_USERNAME;
+            $this->password = MODDLE_PASSWORD;
+            $this->service = MODDLE_SERVICE;
+            $this->token = MODDLE_TOKEN;
+            $this->url = MODDLE_URL;
+        }
 	}
 
 	function moodleGetToken(){
@@ -16,6 +18,10 @@ class Moodle {
     }
 
     function moodle($function, $params, $overrideDev = false) {
+        if (!isset($this->token)) {
+            return new AjaxResponse();
+        }
+
         global $prod;
         if ($prod || $overrideDev) {
             $url = $this->url."/webservice/rest/server.php?wstoken=".$this->token."&wsfunction=".$function."&moodlewsrestformat=json".$params;
