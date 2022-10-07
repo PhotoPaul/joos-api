@@ -90,7 +90,7 @@ class AcademicsService {
             $bScore = (isset($b->active) && $b->active) ? 3 : 0;
             $bScore+= (isset($b->programEnrollmentId) && $b->programEnrollmentId) ? 2 : 0;
             $bScore+= (isset($b->isProfessor) && $b->isProfessor) ? 0 : 1;
-            return $aScore <=> $bScore;
+            return $bScore <=> $aScore;
         }
         usort($return->programEnrollment, 'sortProgramEnrollmentData');
 
@@ -571,7 +571,7 @@ class AcademicsService {
             $bScore = (isset($b->isEnrollmentActive) && $b->isEnrollmentActive) ? 3 : 0;
             $bScore+= (isset($b->isEnrolled) && $b->isEnrolled) ? 2 : 0;
             $bScore+= (isset($b->isProfessor) && $b->isProfessor) ? 0 : 1;
-            return $aScore < $bScore;
+            return $bScore <=> $aScore;
         }
         usort($course->enrollmentData, 'sortEnrollmentData');
 
@@ -1212,7 +1212,7 @@ class AcademicsService {
         function sortUserCoursesData($a, $b) {
             $aScore = strtotime($a->date_time);
             $bScore = strtotime($b->date_time);
-            return $aScore < $bScore;
+            return $bScore <=> $aScore;
         }
         usort($return, 'sortUserCoursesData');
 
