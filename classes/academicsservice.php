@@ -26,7 +26,7 @@ class AcademicsService {
                 'LEFT JOIN admin_users ON admin_program_enrollment.student_id = admin_users.id',
                 'LEFT JOIN admin_user_roles ON admin_user_roles.userId = admin_users.id'
             ],
-            'where' => 'roleId = 6 OR roleId IS NULL',
+            'where' => 'roleId = 6 OR roleId = 7 OR roleId IS NULL',
             'group' => 'admin_programs.id'
         ]);
 
