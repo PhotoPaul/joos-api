@@ -17,8 +17,10 @@ define('DB_TIMEZONE', 'Europe/Athens');
 // Hasn't been implemented yet
 define('DB_TABLE_PREFIX', 'admin_');
 
-// Define the secret used by reCAPTCHA
+// Define the site key and the secret used by reCAPTCHA
 define('GRECAPTCHA_SECRET', '***GRECAPTCHA_SECRET***');
+// Variable site key hasn't been implemented yet
+define('GRECAPTCHA_SITE_KEY', '***GRECAPTCHA_SITE_KEY***');
 
 // Define Moodle server settings
 define('MODDLE_USERNAME', '***MODDLE_USERNAME***');
