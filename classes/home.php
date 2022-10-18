@@ -200,7 +200,8 @@ class Home {
                 ],
                 'table' => 'admin_user_applications',
                 'joins' => 'JOIN admin_applications ON applicationId = admin_applications.id',
-                'where' => ['userId = ? AND hidden = 0', $this->user->id]
+                'where' => ['userId = ? AND hidden = 0', $this->user->id],
+                'order' => 'applicationId'
             ]);
 
             if(!count($result->applications) && $this->auth->authenticateOperation('homeCandidateGetProgramsDataWhenNoApplication')) {
