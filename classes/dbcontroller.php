@@ -8,7 +8,8 @@ class DBController{
         try {
             $this->dbObject = new PDO("mysql:host=".$dbSettings->host.";port=".$dbSettings->port.";dbname=".$dbSettings->db, $dbSettings->username, $dbSettings->password, [PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8;"]);
             $this->dbObject->exec("SET time_zone = '".$dbSettings->timezone."'");
-            $this->dbObject->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION ); //Error Handling
+            $this->dbObject->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION ); // Error Handling
+            $this->dbObject->setAttribute( PDO::ATTR_STRINGIFY_FETCHES, true ); // Fetches "1" instead of 1
         } catch(Exception $e) {
             dbg(new AjaxError(__METHOD__.': '.$e->getMessage()));
         }
